@@ -1,0 +1,118 @@
+---
+output:
+  html_document: default
+  pdf_document: default
+---
+# Practical Machine Learning Project
+##Prediction Assignment Write Up
+
+##Project summary
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement - a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here: http://groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset).
+
+##Data
+The training data for this project are available here:
+[Training data](https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv)
+The test data are available here:
+[Test data](https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv)
+The data for this project come from this source: [data](http://groupware.les.inf.puc-rio.br/har.)
+Full source:
+Velloso, E.; Bulling, A.; Gellersen, H.; Ugulino, W.; Fuks, H. "Qualitative Activity Recognition of Weight Lifting Exercises. Proceedings of 4th International Conference in Cooperation with SIGCHI (Augmented Human '13)". Stuttgart, Germany: ACM SIGCHI, 2013.
+
+###Libraries
+Several libraries are needed in order to complete the analysis, so we first need to load them into the working environment and set the seed:
+```{r}
+library(caret)
+library(rpart)
+library(rpart.plot)
+library(rattle)
+library(randomForest)
+set.seed(13579)
+```
+
+###Loading the data
+Now we need to load in the data from the links above, this provides us with 2 datasets, the training set and the testing set. We will use the training set to model the analysis process and then use the testing set for the validation process. 
+
+```{r}
+Training <- "http://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+Testing  <- "http://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+
+Training <- read.csv(url(Training))
+Testing <- read.csv(url(Testing))
+dim(Training)
+dim(Testing)
+```
+
+###Cleaning the data
+As there are a lot of NA values we need to clean the data before we can analyse it effectively. As well as removing the NA values, we can also dissregard the first seven variables as they're not relevant to the prediction model and are not numeric.
+
+```{r}
+features <- names(Testing[,colSums(is.na(Testing)) == 0])[8:59]
+
+Training <- Training[,c(features,"classe")]
+Testing <- Testing[,c(features,"problem_id")]
+
+
+dim(Testing)
+dim(Training)
+```
+
+
+###Splitting the data
+Now we need to divide the data into a training data set (60%) and a testing data set (40%).
+
+```{r}
+inTrain <- createDataPartition(Training$classe, p=0.60, list = FALSE)
+Training <- Training[inTrain, ]
+Testing <- Training[-inTrain, ]
+
+dim(Testing)
+dim(Training)
+```
+
+
+###Decision Tree Model
+Now that we have cleaned and devided our data we can built a deicision tree model to assist with the anaylysis process.
+```{r}
+treemodel <- rpart(classe ~ ., data = Training, method="class")
+fancyRpartPlot(treemodel)
+```
+
+
+###Random Forest Model
+To compare, we can also use the random forest tool to predict with and we shoud get a small error estimate. 
+```{r}
+set.seed(13579)
+forestmodel <- randomForest(classe ~ ., data = Training, ntree = 1000)
+forestmodel
+
+
+prefin <- trainControl(method="cv", number=3, verboseIter=FALSE)
+final <- train(classe ~ ., data=Training, method="rf",trControl=prefin)
+final
+```
+
+###Testing the models
+Now we have created a tree model and a random forest model we can test them to see which is going to prove most accurate in analysing and predicting the data.
+
+```{r}
+predTree <- predict(treemodel, Testing, type = "class")
+preT <- table(predTree)
+preT
+
+predForest <- predict (forestmodel, Testing, type = "class")
+preF <-table(predForest)
+preF
+```
+
+###Conclusion
+Using cross validation, the results above show that the Random Forest Model provides a more accurate model for the prediction analysis (99.2%).
+
+
+
+
+
+
+
+
+
+
